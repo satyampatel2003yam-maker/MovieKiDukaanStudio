@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual Environment
+venv/
+.env
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Temporary
+temp/
+*.tmp
+
+# Output Files
+output/
+
+# Python cache
+.pytest_cache/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# FFmpeg binaries
+ffmpeg/bin/*.exe
