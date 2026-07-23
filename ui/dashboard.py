@@ -1,245 +1,156 @@
-from tkinter import filedialog
 import customtkinter as ctk
-import subprocess
+from tkinter import filedialog
+import threading
 import os
 
+from video.clip_generator import generate_clips
 
-class Dashboard(ctk.CTkFrame):
 
-    def __init__(self, master):
-        super().__init__(master)
+class Dashboard:
 
-        self.pack(fill="both", expand=True)
+    def __init__(self, root):
+
+        self.root = root
 
         self.movie_path = ""
-        self.movie_folder = ""
-        self.output_folder = ""
+        self.output_path = ""
 
-        # ===========================
-        # Title
-        # ===========================
+        self.build_ui()
+
+    def build_ui(self):
+
         title = ctk.CTkLabel(
-            self,
-            text="🎬 Movie Ki Dukaan Studio",
-            font=("Segoe UI", 30, "bold")
+            self.root,
+            text="🎬 MovieKiDukaan Studio",
+            font=("Arial", 28, "bold")
         )
         title.pack(pady=20)
 
-        # ===========================
-        # Add Movie
-        # ===========================
-        ctk.CTkButton(
-            self,
-            text="📂 Add Movies",
-            width=250,
-            command=self.add_movie
-        ).pack(pady=10)
-
-        # ===========================
-        # Add Folder
-        # ===========================
-        ctk.CTkButton(
-            self,
-            text="📁 Add Folder",
-            width=250,
-            command=self.add_folder
-        ).pack(pady=10)
-
-        # ===========================
-        # Output Folder
-        # ===========================
-        ctk.CTkButton(
-            self,
-            text="📤 Output Folder",
-            width=250,
-            command=self.select_output_folder
-        ).pack(pady=10)
-
-        # ===========================
-        # Generate Clips
-        # ===========================
-        ctk.CTkButton(
-            self,
-            text="🚀 Generate Clips",
-            width=250,
-            fg_color="green",
-            hover_color="darkgreen",
-            command=self.generate_clips
-        ).pack(pady=10)
-
-        # ===========================
-        # Progress
-        # ===========================
-        self.progress = ctk.CTkProgressBar(
-            self,
+        self.movie_label = ctk.CTkLabel(
+            self.root,
+            text="No Movie Selected",
             width=700
         )
+        self.movie_label.pack(pady=5)
 
-        self.progress.pack(pady=25)
+        ctk.CTkButton(
+            self.root,
+            text="📂 Add Movie",
+            command=self.select_movie,
+            width=250
+        ).pack(pady=10)
+
+        self.output_label = ctk.CTkLabel(
+            self.root,
+            text="No Output Folder Selected",
+            width=700
+        )
+        self.output_label.pack(pady=5)
+
+        ctk.CTkButton(
+            self.root,
+            text="📁 Output Folder",
+            command=self.select_output,
+            width=250
+        ).pack(pady=10)
+
+        ctk.CTkButton(
+            self.root,
+            text="🚀 Generate Clips",
+            command=self.start_generation,
+            width=300,
+            height=45
+        ).pack(pady=20)
+
+        self.progress = ctk.CTkProgressBar(self.root, width=700)
+        self.progress.pack(pady=10)
         self.progress.set(0)
 
-        # ===========================
-        # Status
-        # ===========================
         self.status = ctk.CTkLabel(
-            self,
-            text="Status : Ready"
+            self.root,
+            text="Status : Waiting..."
         )
-
         self.status.pack()
 
-    # ==========================================================
-    # Add Single Movie
-    # ==========================================================
+        self.log_box = ctk.CTkTextbox(
+            self.root,
+            width=900,
+            height=300
+        )
+        self.log_box.pack(pady=20)
 
-    def add_movie(self):
+    def log(self, text):
 
-        movie = filedialog.askopenfilename(
+        self.log_box.insert("end", text + "\n")
+        self.log_box.see("end")
 
-            title="Select Movie",
+    def select_movie(self):
 
+        path = filedialog.askopenfilename(
             filetypes=[
                 ("Video Files", "*.mp4 *.mkv *.avi *.mov")
             ]
         )
 
-        if movie:
-
-            self.movie_path = movie
-
-            self.status.configure(
-                text="✅ Movie Ready For Processing"
+        if path:
+            self.movie_path = path
+            self.movie_label.configure(
+                text=os.path.basename(path)
             )
 
-            print(movie)
+    def select_output(self):
 
-    # ==========================================================
-    # Add Folder
-    # ==========================================================
+        path = filedialog.askdirectory()
 
-    def add_folder(self):
-
-        folder = filedialog.askdirectory(
-            title="Select Movie Folder"
-        )
-
-        if folder:
-
-            self.movie_folder = folder
-
-            self.status.configure(
-                text="📁 Movie Folder Selected"
+        if path:
+            self.output_path = path
+            self.output_label.configure(
+                text=path
             )
 
-            print(folder)
-
-    # ==========================================================
-    # Output Folder
-    # ==========================================================
-
-    def select_output_folder(self):
-
-        folder = filedialog.askdirectory(
-            title="Select Output Folder"
-        )
-
-        if folder:
-
-            self.output_folder = folder
-
-            self.status.configure(
-                text="📤 Output Folder Selected"
-            )
-
-            print(folder)
-
-    # ==========================================================
-    # Generate Clips
-    # ==========================================================
-
-    def generate_clips(self):
+    def start_generation(self):
 
         if self.movie_path == "":
-            self.status.configure(
-                text="❌ Please select a movie first."
-            )
+            self.log("❌ Please Select Movie")
             return
 
-        if self.output_folder == "":
-            self.status.configure(
-                text="❌ Please select output folder."
-            )
+        if self.output_path == "":
+            self.log("❌ Please Select Output Folder")
             return
 
-        self.progress.set(0.10)
+        threading.Thread(
+            target=self.run_generator,
+            daemon=True
+        ).start()
+
+    def run_generator(self):
+
+        self.progress.set(0)
+
         self.status.configure(
-            text="🔄 Loading FFmpeg..."
+            text="Creating Preview..."
         )
 
-        ffmpeg = os.path.join(
-            os.getcwd(),
-            "ffmpeg",
-            "bin",
-            "ffmpeg.exe"
-        )
-
-        if not os.path.exists(ffmpeg):
-
-            self.status.configure(
-                text="❌ FFmpeg not found."
-            )
-
-            return
-
-        output_pattern = os.path.join(
-            self.output_folder,
-            "clip_%03d.mp4"
-        )
-
-        command = [
-
-            ffmpeg,
-
-            "-i",
-            self.movie_path,
-
-            "-c",
-            "copy",
-
-            "-map",
-            "0",
-
-            "-f",
-            "segment",
-
-            "-segment_time",
-            "30",
-
-            output_pattern
-
-        ]
+        self.log("🎥 Creating Preview Video...")
 
         try:
 
-            self.progress.set(0.40)
-
-            self.status.configure(
-                text="🎬 Generating Clips..."
-            )
-
-            subprocess.run(
-                command,
-                check=True
+            generate_clips(
+                self.movie_path,
+                self.output_path
             )
 
             self.progress.set(1)
 
             self.status.configure(
-                text="✅ Clips Generated Successfully!"
+                text="Completed"
             )
+
+            self.log("✅ All Clips Generated Successfully")
 
         except Exception as e:
 
+            self.log(str(e))
+
             self.status.configure(
-                text=f"❌ {e}"
-            )
+                text="Failed")
