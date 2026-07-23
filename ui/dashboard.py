@@ -71,11 +71,22 @@ class Dashboard:
     def build_main(self):
         self.main = ctk.CTkFrame(self.root, corner_radius=0)
         self.main.grid(row=0, column=1, sticky="nsew")
+        # Allow the main area to expand vertically and horizontally
+        self.main.grid_rowconfigure(0, weight=1)
         self.main.grid_columnconfigure(0, weight=1)
 
         self.scrollable_frame = ctk.CTkScrollableFrame(self.main, corner_radius=0)
         self.scrollable_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        # Ensure scrollable content expands and the progress section can grow
         self.scrollable_frame.grid_columnconfigure(0, weight=1)
+        # give the progress section (row index 3) available extra vertical space
+        self.scrollable_frame.grid_rowconfigure(3, weight=1)
+
+        # Fixed bottom toolbar to host persistent action buttons
+        self.bottom_toolbar = ctk.CTkFrame(self.main, fg_color="transparent")
+        self.bottom_toolbar.grid(row=1, column=0, sticky="ew", padx=0, pady=(0, 0))
+        self.main.grid_rowconfigure(1, weight=0)
+        self.bottom_toolbar.grid_columnconfigure(0, weight=1)
 
         self.build_header()
         self.build_file_section()
@@ -201,8 +212,14 @@ class Dashboard:
         self.build_action_buttons()
 
     def build_action_buttons(self):
-        button_frame = ctk.CTkFrame(self.progress_frame, fg_color="transparent")
-        button_frame.grid(row=5, column=0, sticky="ew", padx=20, pady=(5, 20))
+        # Prefer placing buttons in the fixed bottom toolbar so they remain visible
+        parent = getattr(self, "bottom_toolbar", self.progress_frame)
+        # If parent is the toolbar, place with padding so it lines up with content
+        button_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        if parent is self.progress_frame:
+            button_frame.grid(row=5, column=0, sticky="ew", padx=20, pady=(5, 20))
+        else:
+            button_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(10, 10))
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
 
