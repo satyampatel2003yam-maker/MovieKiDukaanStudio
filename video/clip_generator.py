@@ -5,6 +5,7 @@ Production Version
 """
 
 from pathlib import Path
+import sys
 import time
 import traceback
 
@@ -98,11 +99,19 @@ class ClipGenerator:
 
     def log(self, message):
 
-        print(message)
+        text = str(message)
+        safe_text = text.encode("ascii", errors="replace").decode("ascii")
+
+        try:
+            print(safe_text)
+        except Exception:
+            pass
 
         if self.log_callback:
-
-            self.log_callback(str(message))
+            try:
+                self.log_callback(safe_text)
+            except Exception:
+                pass
 
     # ==========================================================
     # PROGRESS
@@ -309,11 +318,11 @@ class ClipGenerator:
 
             exported_files = self.exporter.export(
 
-                input_file=input_video,
+                input_file=str(input_video),
 
                 clips=selected_clips,
 
-                output_folder=folders["clips"]
+                output_folder=str(folders["clips"])
 
             )
 

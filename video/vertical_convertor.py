@@ -9,18 +9,17 @@ from video.ffmpeg_engine import (
 
 class VerticalConverter:
 
- def __init__(
-    self,
-    encoder="libx264",
-    quality="High",
-    progress_callback=None,
-    log_callback=None
-):
-    self.encoder = encoder
-    self.quality = quality
-    self.progress_callback = progress_callback
-    self.log_callback = log_callback
-
+    def __init__(
+        self,
+        encoder="libx264",
+        quality="High",
+        progress_callback=None,
+        log_callback=None
+    ):
+        self.encoder = encoder
+        self.quality = quality
+        self.progress_callback = progress_callback
+        self.log_callback = log_callback
 
     # --------------------------------------------------
     # Logging
@@ -48,12 +47,18 @@ class VerticalConverter:
         self,
         input_file,
         output_file,
-        encoder="libx264",
-        quality="High"
+        encoder=None,
+        quality=None
     ):
 
         input_file = Path(input_file)
         output_file = Path(output_file)
+
+        if encoder is None:
+            encoder = self.encoder
+
+        if quality is None:
+            quality = self.quality
 
         if not input_file.exists():
             raise FileNotFoundError(input_file)
@@ -140,7 +145,7 @@ class VerticalConverter:
                 converted_files.append(converted)
 
                 self.log(
-                    f"✓ {output_file.name}"
+                    f"SUCCESS {output_file.name}"
                 )
 
             except Exception as e:
@@ -148,7 +153,7 @@ class VerticalConverter:
                 failed_files.append(str(input_file))
 
                 self.log(
-                    f"✗ {Path(input_file).name} : {e}"
+                    f"FAILED {Path(input_file).name} : {e}"
                 )
 
             self.progress(index, total)

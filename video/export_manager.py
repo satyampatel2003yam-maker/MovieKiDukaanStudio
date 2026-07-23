@@ -3,7 +3,6 @@ import subprocess
 import traceback
 
 from video.ffmpeg_engine import (
-    build_ffmpeg_command,
     export_with_fallback,
     validate_video_file
 )
@@ -129,7 +128,7 @@ class ExportManager:
 
             self.log(
 
-                f"❌ FFmpeg failed : {output_file.name}"
+                f"FFmpeg failed : {output_file.name}"
 
             )
 
@@ -139,7 +138,7 @@ class ExportManager:
 
             self.log(
 
-                f"❌ Invalid video generated : {output_file.name}"
+                f"Invalid video generated : {output_file.name}"
 
             )
 
@@ -155,7 +154,7 @@ class ExportManager:
 
         self.log(
 
-            f"✅ Export completed : {output_file.name}"
+            f"Export completed : {output_file.name}"
 
         )
 

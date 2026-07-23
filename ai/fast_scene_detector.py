@@ -1,7 +1,11 @@
 from pathlib import Path
+import subprocess
+import tempfile
 
 import cv2
 import numpy as np
+
+from video.ffmpeg_engine import find_ffmpeg
 
 
 class FastSceneDetector:
@@ -82,9 +86,54 @@ class FastSceneDetector:
         )
 
         if not capture.isOpened():
-            raise RuntimeError(
-                "Unable to open video."
+            self.log(
+                "OpenCV failed to open video, using FFmpeg fallback."
             )
+            with tempfile.NamedTemporaryFile(
+                suffix=".mp4",
+                delete=False
+            ) as temp_file:
+                ffmpeg = find_ffmpeg()
+                command = [
+                    ffmpeg,
+                    "-y",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    str(video_file),
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "ultrafast",
+                    "-crf",
+                    "23",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "128k",
+                    str(temp_file.name)
+                ]
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode != 0:
+                    raise RuntimeError(
+                        "FFmpeg fallback failed to decode video. "
+                        f"{result.stderr.strip()}"
+                    )
+                capture = cv2.VideoCapture(
+                    temp_file.name
+                )
+                if not capture.isOpened():
+                    raise RuntimeError(
+                        "Failed to open temp decoded video."
+                    )
+                resolved_temp = Path(temp_file.name)
+        else:
+            resolved_temp = None
 
         fps = capture.get(
             cv2.CAP_PROP_FPS
@@ -144,6 +193,11 @@ class FastSceneDetector:
             scene_changes.append(video_duration)
 
         capture.release()
+        if resolved_temp is not None:
+            try:
+                resolved_temp.unlink()
+            except Exception:
+                pass
 
         scenes = []
 
